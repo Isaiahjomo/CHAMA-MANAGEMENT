@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ChamaLink — Smart Chama Manager</title>
+  <meta name="description" content="Manage your Chama contributions, loans, fines, meetings and reports — paperless, on your phone." />
+  <meta name="theme-color" content="#0f1923" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== SPLASH SCREEN ===== -->
+  <div id="splash" class="splash">
+    <div class="splash-logo">
+      <div class="splash-icon">💰</div>
+      <h1>ChamaLink</h1>
+      <p>Smart Chama Manager</p>
+    </div>
+    <div class="splash-loader"><div></div></div>
+  </div>
+
+  <!-- ===== AUTH SCREEN ===== -->
+  <div id="auth-screen" class="screen hidden">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div class="auth-logo">💰</div>
+        <h1>ChamaLink</h1>
+        <p class="auth-tagline">Smart Chama Manager</p>
+      </div>
+
+      <!-- Chama Selection -->
+      <div id="chama-select-view">
+        <h2 class="auth-title">Select Your Chama</h2>
+        <div id="chama-list" class="chama-list"></div>
+        <button class="btn btn-primary btn-full" id="btn-new-chama">
+          <span>➕</span> Create New Chama
+        </button>
+      </div>
+
+      <!-- New Chama Form -->
+      <div id="new-chama-view" class="hidden">
+        <h2 class="auth-title">Create Chama</h2>
+        <div class="form-group">
+          <label>Chama Name</label>
+          <input type="text" id="new-chama-name" placeholder="e.g. Umoja Savings Group" />
+        </div>
+        <div class="form-group">
+          <label>Admin PIN (4–6 digits)</label>
+          <input type="password" id="new-chama-pin" inputmode="numeric" maxlength="6" placeholder="••••" />
+        </div>
+        <div class="form-group">
+          <label>Monthly Contribution (KES)</label>
+          <input type="number" id="new-chama-contrib" placeholder="e.g. 1000" />
+        </div>
+        <div class="form-row">
+          <button class="btn btn-outline" id="btn-cancel-chama">Cancel</button>
+          <button class="btn btn-primary" id="btn-create-chama">Create</button>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-view" class="hidden">
+        <div class="selected-chama-badge" id="selected-chama-badge"></div>
+        <h2 class="auth-title">Enter PIN</h2>
+        <div class="pin-display" id="pin-display">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="pin-pad" id="pin-pad">
+          <button data-digit="1">1</button><button data-digit="2">2</button><button data-digit="3">3</button>
+          <button data-digit="4">4</button><button data-digit="5">5</button><button data-digit="6">6</button>
+          <button data-digit="7">7</button><button data-digit="8">8</button><button data-digit="9">9</button>
+          <button data-digit="back" class="pin-back">⌫</button>
+          <button data-digit="0">0</button>
+          <button data-digit="ok" class="pin-ok">✓</button>
+        </div>
+        <div id="pin-error" class="pin-error hidden">Incorrect PIN. Try again.</div>
+        <button class="btn btn-link" id="btn-change-chama">← Change Chama</button>
+        <div class="member-login-toggle">
+          <span>Member?</span>
+          <button class="btn btn-link" id="btn-member-login">Login as Member</button>
+        </div>
+      </div>
+
+      <!-- Member Login -->
+      <div id="member-login-view" class="hidden">
+        <div class="selected-chama-badge" id="selected-chama-badge-member"></div>
+        <h2 class="auth-title">Member Login</h2>
+        <div class="form-group">
+          <label>Select Member</label>
+          <select id="member-select"></select>
+        </div>
+        <div class="form-group">
+          <label>PIN</label>
+          <input type="password" id="member-pin-input" inputmode="numeric" maxlength="6" placeholder="••••" />
+        </div>
+        <div id="member-pin-error" class="pin-error hidden">Incorrect PIN.</div>
+        <div class="form-row">
+          <button class="btn btn-outline" id="btn-back-to-admin-login">Admin Login</button>
+          <button class="btn btn-primary" id="btn-member-submit">Login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div id="main-app" class="hidden">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-logo">💰</span>
+        <div>
+          <div class="topbar-chama-name" id="topbar-chama-name">ChamaLink</div>
+          <div class="topbar-role" id="topbar-role">Admin</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="btn-notifications" aria-label="Notifications">
+          🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+        <button class="icon-btn" id="btn-logout" aria-label="Logout">⏻</button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="main-content" id="main-content">
+
+      <!-- ── DASHBOARD ── -->
+      <section id="page-dashboard" class="page active">
+        <div class="page-header">
+          <h2>Dashboard</h2>
+          <span id="dash-month-label" class="badge badge-primary"></span>
+        </div>
+        <div class="summary-cards" id="summary-cards"></div>
+        <div class="section-title">Quick Actions</div>
+        <div class="quick-actions" id="quick-actions"></div>
+        <div class="section-title">Recent Activity</div>
+        <div class="activity-feed" id="activity-feed"></div>
+        <div class="section-title">Upcoming Meeting</div>
+        <div id="upcoming-meeting-card" class="meeting-card-preview"></div>
+      </section>
+
+      <!-- ── MEMBERS ── -->
+      <section id="page-members" class="page">
+        <div class="page-header">
+          <h2>Members</h2>
+          <button class="btn btn-primary btn-sm admin-only" id="btn-add-member">+ Add Member</button>
+        </div>
+        <div class="search-bar">
+          <input type="search" id="member-search" placeholder="🔍 Search members…" />
+        </div>
+        <div id="members-list" class="list-container"></div>
+
+        <!-- Add/Edit Member Modal -->
+        <div id="modal-member" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3 id="modal-member-title">Add Member</h3>
+              <button class="modal-close" data-modal="modal-member">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="mem-name" placeholder="e.g. Jane Wanjiru" />
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" id="mem-phone" placeholder="e.g. 0712345678" />
+            </div>
+            <div class="form-group">
+              <label>Role</label>
+              <select id="mem-role">
+                <option value="member">Member</option>
+                <option value="chairperson">Chairperson</option>
+                <option value="treasurer">Treasurer</option>
+                <option value="secretary">Secretary</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Member PIN (4–6 digits)</label>
+              <input type="password" id="mem-pin" inputmode="numeric" maxlength="6" placeholder="••••" />
+            </div>
+            <div class="form-group">
+              <label>Join Date</label>
+              <input type="date" id="mem-join-date" />
+            </div>
+            <input type="hidden" id="mem-id" />
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-member">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-member">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CONTRIBUTIONS ── -->
+      <section id="page-contributions" class="page">
+        <div class="page-header">
+          <h2>Contributions</h2>
+          <button class="btn btn-primary btn-sm admin-only" id="btn-add-contribution">+ Record</button>
+        </div>
+        <div class="month-nav">
+          <button id="contrib-prev-month" class="icon-btn">‹</button>
+          <span id="contrib-month-label" class="month-label"></span>
+          <button id="contrib-next-month" class="icon-btn">›</button>
+        </div>
+        <div id="contributions-summary" class="contrib-summary"></div>
+        <div id="contributions-grid" class="list-container"></div>
+
+        <!-- Record Contribution Modal -->
+        <div id="modal-contribution" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Record Contribution</h3>
+              <button class="modal-close" data-modal="modal-contribution">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Member</label>
+              <select id="contrib-member"></select>
+            </div>
+            <div class="form-group">
+              <label>Month</label>
+              <input type="month" id="contrib-month" />
+            </div>
+            <div class="form-group">
+              <label>Amount (KES)</label>
+              <input type="number" id="contrib-amount" placeholder="e.g. 1000" />
+            </div>
+            <div class="form-group">
+              <label>Payment Method</label>
+              <select id="contrib-method">
+                <option>M-Pesa</option>
+                <option>Cash</option>
+                <option>Bank Transfer</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reference / Notes</label>
+              <input type="text" id="contrib-ref" placeholder="e.g. M-Pesa code" />
+            </div>
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-contribution">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-contribution">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── LOANS ── -->
+      <section id="page-loans" class="page">
+        <div class="page-header">
+          <h2>Loans</h2>
+          <button class="btn btn-primary btn-sm admin-only" id="btn-add-loan">+ New Loan</button>
+        </div>
+        <div class="tab-bar">
+          <button class="tab active" data-tab="loans-active">Active</button>
+          <button class="tab" data-tab="loans-repaid">Repaid</button>
+          <button class="tab" data-tab="loans-all">All</button>
+        </div>
+        <div id="loans-list" class="list-container"></div>
+
+        <!-- Loan Modal -->
+        <div id="modal-loan" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>New Loan</h3>
+              <button class="modal-close" data-modal="modal-loan">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Member</label>
+              <select id="loan-member"></select>
+            </div>
+            <div class="form-group">
+              <label>Principal Amount (KES)</label>
+              <input type="number" id="loan-amount" placeholder="e.g. 10000" />
+            </div>
+            <div class="form-group">
+              <label>Interest Method</label>
+              <select id="loan-interest-type">
+                <option value="flat">Flat Rate</option>
+                <option value="reducing">Reducing Balance</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Interest Rate (% per month)</label>
+              <input type="number" id="loan-interest-rate" value="10" step="0.5" />
+            </div>
+            <div class="form-group">
+              <label>Duration (months)</label>
+              <input type="number" id="loan-duration" value="3" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Disbursement Date</label>
+              <input type="date" id="loan-date" />
+            </div>
+            <div class="loan-preview" id="loan-preview"></div>
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-loan">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-loan">Approve & Disburse</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repayment Modal -->
+        <div id="modal-repayment" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Record Repayment</h3>
+              <button class="modal-close" data-modal="modal-repayment">✕</button>
+            </div>
+            <div id="repayment-loan-info" class="repayment-info"></div>
+            <div class="form-group">
+              <label>Amount Paid (KES)</label>
+              <input type="number" id="repayment-amount" placeholder="e.g. 3500" />
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="repayment-date" />
+            </div>
+            <div class="form-group">
+              <label>Reference</label>
+              <input type="text" id="repayment-ref" placeholder="M-Pesa code or note" />
+            </div>
+            <input type="hidden" id="repayment-loan-id" />
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-repayment">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-repayment">Record</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── FINES ── -->
+      <section id="page-fines" class="page">
+        <div class="page-header">
+          <h2>Fines</h2>
+          <button class="btn btn-primary btn-sm admin-only" id="btn-add-fine">+ Issue Fine</button>
+        </div>
+        <div class="tab-bar">
+          <button class="tab active" data-tab="fines-pending">Pending</button>
+          <button class="tab" data-tab="fines-paid">Paid</button>
+        </div>
+        <div id="fines-list" class="list-container"></div>
+
+        <!-- Fine Modal -->
+        <div id="modal-fine" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Issue Fine</h3>
+              <button class="modal-close" data-modal="modal-fine">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Member</label>
+              <select id="fine-member"></select>
+            </div>
+            <div class="form-group">
+              <label>Reason</label>
+              <select id="fine-reason">
+                <option>Late contribution</option>
+                <option>Missed meeting</option>
+                <option>Late repayment</option>
+                <option>Disruptive behavior</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Amount (KES)</label>
+              <input type="number" id="fine-amount" placeholder="e.g. 200" />
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="fine-date" />
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" id="fine-notes" placeholder="Additional details…" />
+            </div>
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-fine">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-fine">Issue Fine</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── MEETINGS ── -->
+      <section id="page-meetings" class="page">
+        <div class="page-header">
+          <h2>Meetings</h2>
+          <button class="btn btn-primary btn-sm admin-only" id="btn-add-meeting">+ Schedule</button>
+        </div>
+        <div class="tab-bar">
+          <button class="tab active" data-tab="meetings-upcoming">Upcoming</button>
+          <button class="tab" data-tab="meetings-past">Past</button>
+        </div>
+        <div id="meetings-list" class="list-container"></div>
+
+        <!-- Meeting Modal -->
+        <div id="modal-meeting" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3 id="modal-meeting-title">Schedule Meeting</h3>
+              <button class="modal-close" data-modal="modal-meeting">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" id="meeting-title" placeholder="e.g. Monthly General Meeting" />
+            </div>
+            <div class="form-group">
+              <label>Date & Time</label>
+              <input type="datetime-local" id="meeting-datetime" />
+            </div>
+            <div class="form-group">
+              <label>Venue</label>
+              <input type="text" id="meeting-venue" placeholder="e.g. Jomo's House, Westlands" />
+            </div>
+            <div class="form-group">
+              <label>Agenda</label>
+              <textarea id="meeting-agenda" rows="3" placeholder="1. Opening prayer&#10;2. Financial report&#10;3. AOB"></textarea>
+            </div>
+            <input type="hidden" id="meeting-id" />
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-meeting">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-meeting">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Modal -->
+        <div id="modal-attendance" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Record Attendance</h3>
+              <button class="modal-close" data-modal="modal-attendance">✕</button>
+            </div>
+            <div id="attendance-list" class="attendance-list"></div>
+            <div class="form-group">
+              <label>Meeting Minutes / Notes</label>
+              <textarea id="meeting-minutes" rows="4" placeholder="Key decisions and action items…"></textarea>
+            </div>
+            <input type="hidden" id="attendance-meeting-id" />
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-attendance">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-attendance">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── NOTIFICATIONS ── -->
+      <section id="page-notifications" class="page">
+        <div class="page-header">
+          <h2>Notifications</h2>
+          <button class="btn btn-outline btn-sm" id="btn-clear-notifs">Clear All</button>
+        </div>
+        <div id="notifs-list" class="list-container"></div>
+      </section>
+
+      <!-- ── REPORTS ── -->
+      <section id="page-reports" class="page">
+        <div class="page-header">
+          <h2>Reports</h2>
+          <button class="btn btn-outline btn-sm" id="btn-print-report">🖨 Print</button>
+        </div>
+        <div class="report-tabs tab-bar">
+          <button class="tab active" data-report-tab="overview">Overview</button>
+          <button class="tab" data-report-tab="contributions">Contributions</button>
+          <button class="tab" data-report-tab="loans">Loans</button>
+        </div>
+        <div id="reports-content"></div>
+      </section>
+
+      <!-- ── SETTINGS ── -->
+      <section id="page-settings" class="page">
+        <div class="page-header"><h2>Settings</h2></div>
+        <div class="settings-list">
+          <div class="settings-section">
+            <div class="settings-label">Chama Info</div>
+            <div class="settings-item">
+              <span>Chama Name</span>
+              <span id="set-chama-name" class="settings-value"></span>
+            </div>
+            <div class="settings-item">
+              <span>Monthly Contribution</span>
+              <span id="set-contrib-amount" class="settings-value"></span>
+            </div>
+            <button class="btn btn-outline btn-full" id="btn-edit-chama-settings">Edit Chama Settings</button>
+          </div>
+          <div class="settings-section admin-only">
+            <div class="settings-label">Admin</div>
+            <button class="btn btn-outline btn-full" id="btn-change-admin-pin">Change Admin PIN</button>
+            <button class="btn btn-outline btn-full" id="btn-export-data">📤 Export Data (JSON)</button>
+            <button class="btn btn-outline btn-full" id="btn-import-data">📥 Import Data (JSON)</button>
+          </div>
+          <div class="settings-section danger-zone">
+            <div class="settings-label">Danger Zone</div>
+            <button class="btn btn-danger btn-full" id="btn-switch-chama">Switch Chama</button>
+            <button class="btn btn-danger btn-full admin-only" id="btn-delete-chama">Delete This Chama</button>
+          </div>
+        </div>
+
+        <!-- Edit Chama Modal -->
+        <div id="modal-chama-settings" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Edit Chama Settings</h3>
+              <button class="modal-close" data-modal="modal-chama-settings">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Chama Name</label>
+              <input type="text" id="edit-chama-name" />
+            </div>
+            <div class="form-group">
+              <label>Monthly Contribution (KES)</label>
+              <input type="number" id="edit-chama-contrib" />
+            </div>
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-chama-settings">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-chama-settings">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Change PIN Modal -->
+        <div id="modal-change-pin" class="modal hidden">
+          <div class="modal-backdrop"></div>
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <h3>Change Admin PIN</h3>
+              <button class="modal-close" data-modal="modal-change-pin">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Current PIN</label>
+              <input type="password" id="pin-current" inputmode="numeric" maxlength="6" placeholder="••••" />
+            </div>
+            <div class="form-group">
+              <label>New PIN</label>
+              <input type="password" id="pin-new" inputmode="numeric" maxlength="6" placeholder="••••" />
+            </div>
+            <div class="form-group">
+              <label>Confirm New PIN</label>
+              <input type="password" id="pin-confirm" inputmode="numeric" maxlength="6" placeholder="••••" />
+            </div>
+            <div id="change-pin-error" class="pin-error hidden"></div>
+            <div class="form-row">
+              <button class="btn btn-outline modal-close" data-modal="modal-change-pin">Cancel</button>
+              <button class="btn btn-primary" id="btn-save-pin">Change PIN</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" data-page="contributions">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">Contributions</span>
+      </button>
+      <button class="nav-item" data-page="loans">
+        <span class="nav-icon">🏦</span>
+        <span class="nav-label">Loans</span>
+      </button>
+      <button class="nav-item" data-page="meetings">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Meetings</span>
+      </button>
+      <button class="nav-item" data-page="more-menu">
+        <span class="nav-icon">⋯</span>
+        <span class="nav-label">More</span>
+      </button>
+    </nav>
+
+    <!-- More Menu Drawer -->
+    <div id="more-drawer" class="more-drawer hidden">
+      <div class="more-backdrop"></div>
+      <div class="more-panel">
+        <button class="more-item" data-page="members">
+          <span>👥</span> Members
+        </button>
+        <button class="more-item" data-page="fines">
+          <span>⚠️</span> Fines
+        </button>
+        <button class="more-item" data-page="reports">
+          <span>📊</span> Reports
+        </button>
+        <button class="more-item" data-page="notifications">
+          <span>🔔</span> Notifications
+        </button>
+        <button class="more-item" data-page="settings">
+          <span>⚙️</span> Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Import file input -->
+    <input type="file" id="import-file-input" accept=".json" class="hidden" />
+
+  </div><!-- end main-app -->
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
